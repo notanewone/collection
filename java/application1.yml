@@ -21,3 +21,16 @@ spring:
     properties:
       jadira.usertype.autoRegisterUserTypes: true
     show-sql: true
+
+logging:
+  level:
+    org:
+      springframework:
+        jdbc:
+          core:
+            JdbcTemplate: DEBUG
+            StatementCreatorUtils: TRACE
+
+spring:
+  jpa:
+    database-platform: org.hibernate.dialect.Oracle12cDialect
