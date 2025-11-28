@@ -1,7 +1,7 @@
 sourceSets {
     test {
         resources {
-            srcDir "${project.rootDir}/cs-liquibase/database"
+            srcDir "${project.rootDir}/liquibase/database"
         }
     }
 }
