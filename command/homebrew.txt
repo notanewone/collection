@@ -1,0 +1,9 @@
+brew tap caskroom/cask
+brew tap caskroom/versions
+
+brew search
+brew search --casks
+
+brew install <software name from brew search>
+brew cask install <software name from brew search --casks>
+

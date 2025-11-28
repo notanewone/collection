@@ -1,0 +1,5 @@
+CATALINA_OPTS="$CATALINA_OPTS -agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5007"
+JAVA_OPTS="-Djava.awt.headless=true -Dfile.encoding=UTF-8 -server -Xms1g -Xmx1536m -XX:NewSize=512m -XX:MaxNewSize=512m -XX:PermSize=256m -XX:MaxPermSize=512m -XX:+DisableExplicitGC -Dhttp.proxyHost=proxy.net.au -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy.net.au -Dhttps.proxyPort=8080 -D"
+
+mvn install:install-file -Dpackaging=pom -Dfile=pom.xml -DpomFile=pom.xml
+
