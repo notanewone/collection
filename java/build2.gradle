@@ -355,16 +355,16 @@ task generatePartnerReverseProxy(type: GenerateTask) {
     ]
 }
 
-task generateVivaApi(type: GenerateTask) {
+task generateVApi(type: GenerateTask) {
     inputSpec = configurations.api.filter {
-        it.getName().startsWith("api-viva-")
+        it.getName().startsWith("api-V-")
     }.getSingleFile().toString()
     generatorName = "java"
     library = "restclient"
     outputDir = "$buildDir/generated".toString()
-    packageName = "au.com.example.viva.v1"
-    apiPackage = "au.com.example.viva.v1.api"
-    modelPackage = "au.com.example.viva.v1.model"
+    packageName = "au.com.example.V.v1"
+    apiPackage = "au.com.example.V.v1.api"
+    modelPackage = "au.com.example.V.v1.model"
     configOptions = [
             dateLibrary: "java8-localdatetime",
             interfaceOnly: "true",
