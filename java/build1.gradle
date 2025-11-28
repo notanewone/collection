@@ -1,0 +1,227 @@
+buildscript {
+    ext {
+        springBootVersion = '3.3.9'
+    }
+    repositories {
+        mavenCentral()
+    }
+}
+
+plugins {
+    id 'jacoco'
+    id 'java'
+    id 'checkstyle'
+    id "org.springframework.boot" version "${springBootVersion}"
+    id 'com.gorylenko.gradle-git-properties' version '2.4.1'
+    id 'io.spring.dependency-management' version '1.1.6'
+    id 'com.google.cloud.tools.jib' version '3.3.1'
+    id 'org.barfuin.gradle.jacocolog' version '3.1.0'
+}
+
+sourceCompatibility = '17'
+targetCompatibility = '17'
+
+configurations {
+    checkstyleConfig
+    api
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        name 'GitLab project/app'
+        url 'https://gitlab.com/api/v4/groups/0000/-/packages/maven'
+        credentials(HttpHeaderCredentials) {
+
+            // If running in CI then send Job-Token header
+            if (System.getenv('GITLAB_CI') != null) {
+                name = 'Job-Token'
+                value = System.getenv('CI_JOB_TOKEN')
+            } else { // Otherwise send Private-Token header
+                name = 'Private-Token'
+                value = System.getenv('CI_JOB_TOKEN')
+            }
+        }
+        authentication {
+            header(HttpHeaderAuthentication)
+        }
+    }
+    mavenCentral()
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+task copyGeneratedClasses(type: Copy) {
+    from file('build/classes/java/generated')
+    into file('build/classes/java/main')
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework:spring-context-support'
+
+    // Get Properties from AWS Parameter Store
+    implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap:4.1.4'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-parameter-store:3.1.1'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-secrets-manager:3.1.1'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.1.1'
+    implementation 'io.awspring.cloud:spring-cloud-aws-starter-dynamodb:3.1.1'
+
+    // Fix resttemplate HTTP PATCH issue
+    implementation 'org.apache.httpcomponents.client5:httpclient5:5.3.1'
+
+    implementation 'commons-io:commons-io:2.15.1'
+    implementation 'org.apache.commons:commons-lang3:3.14.0'
+
+    // Templating engine
+    // Upgrading freemarker library needs to update Configuration.VERSION_2_3_32 config code
+    implementation 'org.freemarker:freemarker:2.3.32'
+
+    // GPG
+    implementation 'org.bouncycastle:bcpg-jdk18on:1.78.1'
+
+    // SFTP
+    implementation 'com.github.mwiede:jsch:0.2.16'
+
+    //fix vulnerability issue
+    implementation 'io.netty:netty-handler:4.1.118.Final'
+    implementation 'net.minidev:json-smart:2.5.2'
+
+    runtimeOnly 'com.datadoghq:dd-java-agent:1.18.1'
+
+    runtimeOnly 'org.codehaus.janino:janino:3.1.6'
+    runtimeOnly 'net.logstash.logback:logstash-logback-encoder:6.6'
+
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.7.0'
+}
+
+jib {
+    from {
+        image = 'registry.gitlab.com/aws-corretto-17-alpine:17.0.10-alpine3.19'
+    }
+    to {
+        image = 'registry.gitlab.com'
+    }
+    container {
+        mainClass = 'com.example.Example'
+        user = '1:1'
+        format = 'Docker'
+        jvmFlags = [
+                '-javaagent:/app/libs/dd-java-agent-1.18.1.jar'
+        ]
+    }
+}
+
+sourceSets {
+    generated {
+        compileClasspath = configurations.compileClasspath
+        java {
+            srcDirs "${project.buildDir}/generated/src/main/java"
+        }
+    }
+
+    main {
+        compileClasspath = compileClasspath + sourceSets.generated.output
+        java {
+            srcDirs "${project.buildDir}/src/main/java"
+        }
+    }
+
+    test {
+        compileClasspath = compileClasspath + sourceSets.generated.output
+    }
+
+}
+
+processResources {
+    filesMatching(["**/application*.yml", "**/bootstrap*.yml"]) {
+        expand(project.properties)
+    }
+}
+
+springBoot {
+    version = System.getenv('IMAGE_TAG') ?: 'local'
+    buildInfo()
+}
+
+bootRun {
+    systemProperties = System.properties
+    classpath = classpath + sourceSets.generated.output
+}
+
+bootJar {
+    classpath = classpath + sourceSets.generated.output
+    archiveFileName = "${project.name}.jar"
+}
+
+test {
+    classpath = classpath + sourceSets.generated.output
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+    testLogging {
+        exceptionFormat = 'full'
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.7"
+    reportsDirectory = file("$buildDir/reports/jacoco")
+}
+
+jacocoTestReport {
+    reports {
+        xml {
+            required = false
+        }
+        csv {
+            required = false
+        }
+        html.destination file("${buildDir}/jacocoHtml")
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                minimum = 0.9
+            }
+        }
+
+        rule {
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.8
+            }
+        }
+    }
+}
+
+checkstyle {
+    configDirectory = file("${project.rootDir}/checkstyle")
+    checkstyleTest.enabled = false
+    toolVersion = "10.12.4"
+}
+
+checkstyleMain {
+    source = "src/main/java"
+}
+
+checkstyleGenerated.enabled = false
+
+compileGeneratedJava.dependsOn('processResources')
+copyGeneratedClasses.dependsOn('compileGeneratedJava')
+tasks.jib.dependsOn('copyGeneratedClasses')

@@ -1,0 +1,10 @@
+version: '3.3'
+services:
+  perl-5.36.0-bullseye-arm64:
+    container_name: batch-perl
+    volumes:
+      - '../dev/perl:/mnt/poc'
+      - '../src/perl/btch/scripts:/mnt/scripts'
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    image: 'batch-perl:0.0.5'

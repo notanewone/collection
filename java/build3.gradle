@@ -1,0 +1,35 @@
+sourceSets {
+    test {
+        resources {
+            srcDir "${project.rootDir}/cs-liquibase/database"
+        }
+    }
+}
+
+
+tasks.register('printSourceSetInformation') {
+    println "  Root project:   ${project.rootProject}";
+    println "  rootDir:      ${project.rootDir}"
+    println "  projectDir:   ${project.projectDir}";
+    println "  project dir:  ${System.getProperty("user.dir")}";
+
+    doLast {
+        sourceSets.each { srcSet ->
+            println "[" + srcSet.name + "]"
+            print "-->Source directories: " + srcSet.allJava.srcDirs + "\n"
+            print "-->Output directories: " + srcSet.output.classesDirs.files + "\n"
+            print "-->resource directories: " + srcSet.allSource.srcDirs + "\n"
+
+            println ""
+        }
+    }
+}
+
+environment 'TEST_MODE', 'true'
+environment 'LOG_LEVEL', 'DEBUG'
+
+environment([
+        'AWS_REGION': System.getenv('AWS_REGION') ?: 'ap-south-east-dummy',
+        'SPRING_PROFILES_ACTIVE': 'dummy-profile',
+        'TEST_MODE': 'true'
+])

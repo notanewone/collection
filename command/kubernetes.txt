@@ -1,0 +1,12 @@
+saml2aws login -a api-dev
+aws eks --region ap-southeast-2 update-kubeconfig --name api-cluster2 --profile api-dev
+kubens
+kubens api-apps
+kubectl get pods
+kubectl logs -f  deployment/blue --all-containers=true --since=1m
+
+
+
+
+
+

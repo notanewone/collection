@@ -1,0 +1,385 @@
+import org.openapitools.generator.gradle.plugin.tasks.GenerateTask
+
+
+
+plugins {
+    id 'io.spring.dependency-management' version '1.1.0'
+    id 'org.springframework.boot' version "${springBootVersion}"
+    id 'com.gorylenko.gradle-git-properties' version '2.4.1'
+    id 'com.google.cloud.tools.jib' version '3.3.1'
+    id 'info.solidsoft.pitest' version '1.7.4'
+    id 'org.openapi.generator' version '7.2.0'
+    id 'org.barfuin.gradle.jacocolog' version '3.1.0'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
+
+ext['junit-jupiter.version'] = '5.10.0'
+
+repositories {
+    mavenLocal()
+    maven {
+        name 'GitLab project/app'
+        url 'https://gitlab.com/api/v4/groups/0000/-/packages/maven'
+        credentials(HttpHeaderCredentials) {
+
+            // If running in CI then send Job-Token header
+            if (System.getenv('GITLAB_CI') != null) {
+                name = 'Job-Token'
+                value = System.getenv('CI_JOB_TOKEN')
+            } else { // Otherwise send Private-Token header
+                name = 'Private-Token'
+                value = System.getenv('CI_JOB_TOKEN')
+            }
+        }
+
+        authentication {
+            header(HttpHeaderAuthentication)
+        }
+    }
+    mavenCentral()
+}
+
+configurations {
+    checkstyleConfig
+    api
+}
+
+dependencies {
+
+    api 'com.example:api-order:1.0.34@yaml'
+    api 'com.example:api-invoice:1.0.2@yaml'
+    api 'com.example:api-paydock:1.0.6@yaml'
+    api 'com.example:api-direct-marketing:1.0.0@yaml'
+    api 'com.example:api-member-profile:1.0.35@yaml'
+    api 'com.example:api-fraud-detection:1.0.8@yaml'
+}
+
+task copyGeneratedClasses(type: Copy) {
+    from file('build/classes/java/generated')
+    into file('build/classes/java/main')
+}
+
+jib {
+    from {
+        image = 'registry.gitlab.com/aws-corretto-17-alpine:17.0.10-alpine3.19'
+    }
+    to {
+        image = 'registry.gitlab.com'
+    }
+    container {
+        mainClass = 'au.com.example.orders.Application'
+        format = 'Docker'
+        user = '1:1'
+        jvmFlags = ["--add-opens=java.base/java.util.concurrent=ALL-UNNAMED", "-javaagent:/app/libs/dd-java-agent-1.18.1.jar"]
+    }
+}
+
+apply plugin: 'info.solidsoft.pitest'
+
+
+sourceSets {
+    generated {
+        compileClasspath = configurations.compileClasspath
+        java {
+            srcDirs "${project.buildDir}/swagger-code-orders/src/main/java"
+            srcDirs "${project.buildDir}/swagger-code-invoice/src/main/java"
+            srcDirs "${project.buildDir}/swagger-code-paydock/src/main/java"
+            srcDirs "${project.buildDir}/swagger-code-direct-marketing/src/main/java"
+            srcDirs "${project.buildDir}/swagger-code-member-profile/src/main/java"
+            srcDirs "${project.buildDir}/swagger-code-fraud-detection/src/main/java"
+        }
+    }
+
+    main {
+        compileClasspath = compileClasspath + sourceSets.generated.output
+        java {
+            srcDirs "${project.buildDir}/src/main/java"
+        }
+    }
+
+    test {
+        compileClasspath = compileClasspath + sourceSets.generated.output
+    }
+
+}
+
+processResources {
+    filesMatching(["**/application*.yml", "**/bootstrap*.yml"]) {
+        expand(project.properties)
+    }
+}
+
+springBoot {
+    version = System.getenv('IMAGE_TAG') ?: 'local'
+    buildInfo()
+}
+
+bootRun {
+    systemProperties = System.properties
+    classpath = classpath + sourceSets.generated.output
+    jvmArgs = ['--add-opens=java.base/java.util.concurrent=ALL-UNNAMED']
+}
+
+bootJar {
+    classpath = classpath + sourceSets.generated.output
+    archiveFileName = "${project.name}.jar"
+}
+
+test {
+    classpath = classpath + sourceSets.generated.output
+    jvmArgs = ['--add-opens=java.base/java.util.concurrent=ALL-UNNAMED']
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+    testLogging {
+        exceptionFormat = 'full'
+    }
+}
+
+jacoco {
+    toolVersion = "0.8.7"
+    reportsDirectory = file("$buildDir/reports/jacoco")
+}
+
+jacocoTestReport {
+    //sourceDirectories = files("src/main/java")
+    reports {
+        xml {
+            required = true
+        }
+        xml.destination file("${buildDir}/jacoco.xml")
+        csv {
+            required = false
+        }
+        html.destination file("${buildDir}/jacocoHtml")
+    }
+}
+
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                minimum = 0.9
+            }
+        }
+
+        rule {
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.8
+            }
+        }
+    }
+}
+
+task publishApis(type: Copy) {
+    into "api-spec"
+    from configurations.api
+    include "api-orders-*.yaml"
+}
+
+
+
+task generateOrdersApi(type: GenerateTask) {
+
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-order-")
+    }.getSingleFile().toString()
+    generatorName = "spring"
+    outputDir = "${project.buildDir}/swagger-code-orders".toString()
+    apiPackage = "au.com.example.orders.v1.api"
+    invokerPackage = "au.com.example.orders.v1.client"
+    modelPackage = "au.com.example.orders.v1.model"
+    configOptions = [
+            dateLibrary: "java8-localdatetime",
+            interfaceOnly: "true",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useSpringBoot3: "true"
+    ]
+}
+
+task generateInvoice(type: GenerateTask) {
+
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-invoice--")
+    }.getSingleFile().toString()
+    generatorName = "spring"
+    outputDir = "${project.buildDir}/swagger-code-invoice".toString()
+    apiPackage = "au.com.example.invoices..v1.api"
+    modelPackage = "au.com.example.invoices..v1.model"
+    configOptions = [
+            dateLibrary: "java8-localdatetime",
+            interfaceOnly: "true",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useSpringBoot3: "true"
+    ]
+}
+
+task generatePaydockClient(type: GenerateTask) {
+
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-paydock-")
+    }.getSingleFile().toString()
+    generatorName = "java"
+    library = 'webclient'
+    outputDir = "${project.buildDir}/swagger-code-paydock".toString()
+    apiPackage = "au.com.example.paydock.v1.api"
+    invokerPackage = "au.com.example.paydock.v1.client"
+    modelPackage = "au.com.example.paydock.v1.model"
+    configOptions = [
+            dateLibrary: "java8",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useJakartaEe: "true"
+    ]
+}
+
+task generateDirectMarketing(type: GenerateTask) {
+
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-direct-marketing-")
+    }.getSingleFile().toString()
+    generatorName = "java"
+    library = 'webclient'
+    outputDir = "${project.buildDir}/swagger-code-direct-marketing".toString()
+    apiPackage = "au.com.example.directmarketing.v1.api"
+    invokerPackage = "au.com.example.directmarketing.v1.client"
+    modelPackage = "au.com.example.directmarketing.v1.model"
+    configOptions = [
+            dateLibrary: "java8",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useJakartaEe: "true"
+    ]
+}
+
+task generateMemberProfileClient(type: GenerateTask) {
+
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-member-profile-")
+    }.getSingleFile().toString()
+    generatorName = "java"
+    library = 'webclient'
+    outputDir = "$buildDir/swagger-code-member-profile".toString()
+    apiPackage = "au.com.example.memberprofile.v1.api"
+    invokerPackage = "au.com.example.memberprofile.v1.client"
+    modelPackage = "au.com.example.memberprofile.v1.model"
+    configOptions = [
+            dateLibrary: "java8",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useJakartaEe: "true"
+    ]
+
+}
+
+task generateFraudDetectionClient(type: GenerateTask) {
+
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-fraud-detection-")
+    }.getSingleFile().toString()
+    generatorName = "java"
+    library = 'webclient'
+    outputDir = "$buildDir/swagger-code-fraud-detection".toString()
+    apiPackage = "au.com.example.frauddetection.v1.api"
+    invokerPackage = "au.com.example.frauddetection.v1.client"
+    modelPackage = "au.com.example.frauddetection.v1.model"
+    configOptions = [
+            dateLibrary: "java8-localdatetime",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useJakartaEe: "true"
+    ]
+}
+
+task openApiGenerateAll(dependsOn: ['generateOrdersApi', 'generateInvoice', 'generatePaydockClient', 'generateDirectMarketing', 'generateMemberProfileClient', 'generateFraudDetectionClient'])
+
+checkstyleMain {
+    config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, "checkstyle.xml")
+    source = "src/main/java"
+}
+
+checkstyleTest {
+    config = resources.text.fromArchiveEntry(configurations.checkstyleConfig, "checkstyle-test.xml")
+    source = "src/test/java"
+}
+
+checkstyle {
+    toolVersion = '10.12.3'
+}
+
+checkstyleGenerated.enabled = false
+
+compileGeneratedJava.dependsOn('openApiGenerateAll')
+copyGeneratedClasses.dependsOn('compileGeneratedJava')
+tasks.jib.dependsOn('copyGeneratedClasses')
+
+
+
+task generatePartnerReverseProxy(type: GenerateTask) {
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-partner-reverse-proxy-")
+    }.getSingleFile().toString()
+    generatorName = "spring"
+    outputDir = "$buildDir/generated".toString()
+    packageName = "au.com.example.partnerreverseproxy.v1"
+    apiPackage = "au.com.example.partnerreverseproxy.v1.api"
+    modelPackage = "au.com.example.partnerreverseproxy.v1.model"
+    configOptions = [
+            dateLibrary: "java8-localdatetime",
+            interfaceOnly: "true",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useSpringBoot3: "true"
+    ]
+}
+
+task generateVivaApi(type: GenerateTask) {
+    inputSpec = configurations.api.filter {
+        it.getName().startsWith("api-viva-")
+    }.getSingleFile().toString()
+    generatorName = "java"
+    library = "restclient"
+    outputDir = "$buildDir/generated".toString()
+    packageName = "au.com.example.viva.v1"
+    apiPackage = "au.com.example.viva.v1.api"
+    modelPackage = "au.com.example.viva.v1.model"
+    configOptions = [
+            dateLibrary: "java8-localdatetime",
+            interfaceOnly: "true",
+            annotationLibrary: "none",
+            documentationProvider: "none",
+            openApiNullable: "false",
+            useTags: "true",
+            useSpringBoot3: "true",
+            useJakartaEe: "true",
+            useBeanValidation: "true",
+            performBeanValidation: "true"
+    ]
+}
+
+
+
+
+

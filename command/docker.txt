@@ -1,0 +1,68 @@
+docker login registry.gitlab.com -u <uname> -p <pwd>
+
+docker run -it -rm -d -v /Users:/mnt ruby:2.3.3
+docker exec -it web-compiler bash
+
+docker commit web-compiler compiler-intel:0.0.7
+docker tag compiler-intel:0.0.6 registry.gitlab.com/web:compiler-intel64-0.0.7
+docker push registry.gitlab.com/web:compiler-intel64-0.0.7
+
+docker commit <container> <image-name>:<version>
+docker tag <image-name>:<version> <registry-address>
+docker push <registry-address>
+
+*************************************
+
+brew install docker
+brew install docker-compose
+brew install colima
+brew reinstall qemu
+
+
+host.docker.internal
+docker run -it -rm -d -v /Users/<user>/git/site:/mnt ruby:2.3.3
+docker exec -it web-compiler bash
+docker exec -it --user=root test-local sh
+
+docker save myimage:latest | gzip > myimage_latest.tar.gz
+docker load < busybox.tar.gz
+
+docker export -o hello.tar 9e9f14393cad
+tar -tvf hello.tar
+
+colima start -c 6 -m 8 -a x86_64 -p intel
+colima start -c 6 -m 8 -a aarch64 -p arm
+colima start -c 6 -m 8 -a aarch64 -t vz --vz-rosetta -p rosetta
+arch -x86_64
+
+
+sudo rm /private/var/run/docker.sock
+
+aws ecs describe-tasks --cluster microservices-dev --tasks abcde --region ap-southeast-2 | grep enableExecuteCommand
+aws ecs update-service --cluster microservices-dev --service bff-f88ece6a --region ap-southeast-2 --enable-execute-command --force-new-deployment
+aws ecs execute-command --cluster microservices-dev --task abcde --container app --region ap-southeast-2 --command "/bin/sh" --interactive
+
+ManagedECSPolicy
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "ssmmessages:CreateControlChannel",
+                "ssmmessages:CreateDataChannel",
+                "ssmmessages:OpenControlChannel",
+                "ssmmessages:OpenDataChannel"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        }
+    ]
+}
+
+*************************************
+
+openssl s_client -showcerts -connect registry-1.docker.io:443
+
+colima ssh -- sudo cp *.crt /usr/local/share/ca-certificates/
+colima ssh -- sudo update-ca-certificates
+colima ssh -- sudo service docker restart
