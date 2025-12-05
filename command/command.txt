@@ -16,3 +16,13 @@ nohup ./executable > output 2>&1 &
 java -cp "jasypt-1.9.3.jar" org.jasypt.intf.cli.JasyptPBEStringEncryptionCLI verbose='false' algorithm='PBEWithMD5AndTripleDES' stringOutputType='base64' password=$2 input=$1
 java -cp "jasypt-1.9.3.jar" org.jasypt.intf.cli.JasyptPBEStringDecryptionCLI verbose='false' algorithm='PBEWithMD5AndTripleDES' stringOutputType='base64' password=$2 input=$1
 
+wsl -l -o
+wsl -l -v
+wsl -d <distro>
+wsl --shutdown
+wsl --terminate <distro>
+
+openssl pkcs12 -in <filename.pfx> -nocerts -out a.key
+openssl pkcs12 -in <filename.pfx> -nocerts -nodes -out a.key
+openssl pkcs12 -in <filename.pfx> -clcerts -nokeys -out a.crt
+openssl pkcs12 -in <filename.pfx> -cacerts -nokeys -chain -out ca.crt
