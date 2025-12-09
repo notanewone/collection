@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+    id 'io.quarkus'
+    id("io.freefair.lombok") version "9.1.0"
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+dependencies {
+    annotationProcessor 'org.projectlombok:lombok:1.18.38'
+
+    implementation enforcedPlatform("${quarkusPlatformGroupId}:${quarkusPlatformArtifactId}:${quarkusPlatformVersion}")
+    implementation 'io.quarkus:quarkus-rest'
+    implementation 'io.quarkus:quarkus-rest-jackson'
+    implementation 'io.quarkus:quarkus-arc'
+    implementation 'io.quarkus:quarkus-extension-processor'
+
+    testImplementation 'io.quarkus:quarkus-junit5'
+    testImplementation 'io.rest-assured:rest-assured'
+}
+
+//**************************
+
+https://quarkus.io/guides/getting-started
+mvn io.quarkus.platform:quarkus-maven-plugin:3.30.2:create -DbuildTool=gradle
+rest,rest-jackson
+
+//**************************
+
