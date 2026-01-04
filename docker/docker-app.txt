@@ -14,6 +14,7 @@ https://github.com/Tecnativa/docker-socket-proxy
 https://github.com/rcourtman/Pulse
 https://github.com/louislam/uptime-kuma
 https://github.com/clemcer/LoggiFly
+https://github.com/amir20/dozzle
 
 https://github.com/docusealco/docuseal
 https://github.com/documenso/documenso
