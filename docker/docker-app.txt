@@ -8,6 +8,7 @@ https://github.com/pdfcpu/pdfcpu
 https://github.com/louislam/dockge
 https://github.com/jesseduffield/lazydocker
 https://github.com/portainer/portainer
+https://github.com/Finsys/dockhand
 
 https://github.com/Tecnativa/docker-socket-proxy
 
