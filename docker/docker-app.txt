@@ -9,6 +9,7 @@ https://github.com/louislam/dockge
 https://github.com/jesseduffield/lazydocker
 https://github.com/portainer/portainer
 https://github.com/Finsys/dockhand
+https://github.com/shubh-io/DockMate
 
 https://github.com/Tecnativa/docker-socket-proxy
 
