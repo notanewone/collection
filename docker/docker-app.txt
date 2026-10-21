@@ -4,6 +4,7 @@ https://github.com/gchq/CyberChef/
 https://github.com/toeverything/AFFiNE
 https://github.com/Stirling-Tools/Stirling-PDF
 https://github.com/pdfcpu/pdfcpu
+https://github.com/c4illin/ConvertX
 
 https://github.com/louislam/dockge
 https://github.com/jesseduffield/lazydocker
@@ -22,6 +23,7 @@ https://github.com/docusealco/docuseal
 https://github.com/documenso/documenso
 https://github.com/OpenSignLabs/OpenSign
 https://github.com/LibreSign/libresign
+https://github.com/yuzutech/kroki
 
 *** experimental ***
 https://github.com/steveseguin/vdo.ninja
